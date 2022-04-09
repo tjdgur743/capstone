@@ -13,3 +13,6 @@
 
 # 설치가 완료된 내 pc
 ![image](https://user-images.githubusercontent.com/87261213/162556662-0a8d8a76-ffdb-4e3b-bd56-9bda8a311a82.png)
+
+# 출처
+* RaspberryPi 처음 설정하기 - *인천대학교 임베디드시스템 공학과 최병조 교수님*
