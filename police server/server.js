@@ -1,12 +1,17 @@
-const express = require('express')
+'use strict'
+const express = require('express');
+const backend = express();
+var server = require('http').createServer(backend);
+var socket = require('socket.io')(server);
 const path = require('path') 
-const serve_static = require('serve-static') // To access to files
+const serve_static = require('serve-static') // To access files
 const session = require('express-session');
 
 // Configuration for clients
-const backend = express()
+backend.use(express.json()) // Support json
 backend.use(express.urlencoded({extended:true})) // Receive extended methods to encode URL
 backend.use('/public', serve_static(path.join(__dirname, 'public'))) // Setting so that /public directory can be used
+backend.use('/node_modules/socket.io/client-dist', express.static(__dirname+'/node_modules/socket.io/client-dist')) // socket.io
 
 // Session setting
 backend.use(session({
@@ -15,7 +20,7 @@ backend.use(session({
     secret: 'secret key',	//암호화하는 데 쓰일 키
     resave: false,	//세션을 언제나 저장할지 설정함
     saveUninitialized: true,	//세션이 저장되기 전 uninitialized 상태로 미리 만들어 저장
-  }))
+}));
 
 // Get request configuration
 backend.get("/", (req, res) => {
@@ -23,12 +28,17 @@ backend.get("/", (req, res) => {
 });
 backend.get("/Observation", (req, res) => {
     if(req.session.user) // If logged in
-       res.sendFile(__dirname+'/staff_only/Observation.html');
+        res.sendFile(__dirname+'/staff_only/Observation.html');
     else
         res.send("<script>alert('Invalid access'); location.href='/public/Login.html';</script>");
 });
 
-user_ID = 'police'; user_PW = '112'
+backend.post("/process/detection", (req, res) => { // Request from python
+    console.log(req.body);
+    socket.emit('message from python', req.body.message);
+});
+
+let user_ID = 'police'; let user_PW = '112';
 // Set what to do when a post request from '/process/login' arrives
 backend.post('/process/login', (request, response)=>{
     const param_ID = request.body.id;
@@ -50,6 +60,6 @@ backend.post('/process/login', (request, response)=>{
     }
 })
 
-backend.listen(3000, ()=>{
+server.listen(3000, ()=>{
     console.log('Listening on port 3000')
 })
