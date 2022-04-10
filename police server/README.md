@@ -3,7 +3,7 @@
 ### 아이디: police / 비밀번호: 112 입력<br>
 ![image](https://user-images.githubusercontent.com/67142421/162588624-778981c8-9409-4353-a065-5b67aaf44668.png)
 
-### 경찰 전용 페이지에 로그인없이 접근
+### 경찰 전용 페이지에 로그인없이 접근(session을 이용해서 허가되지않은 접근 방지)
 ![image](https://user-images.githubusercontent.com/67142421/162632552-dd4392b5-7a5d-44c5-ab5f-11cef86d1977.png)
 
 ### 로그인 실패<br>
