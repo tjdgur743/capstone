@@ -1,3 +1,4 @@
+# opencv-python==4.4.0.46 numpy==1.19.3
 import socket
 import time
 from imutils.video import VideoStream
