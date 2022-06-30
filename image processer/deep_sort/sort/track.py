@@ -90,7 +90,7 @@ class Track:
         self.prev_mean=mean # For previous position
         self.slow_object=False
         self.timer_alarm=timer_alarm.Timer(self.slow_object)
-        self.parked=False
+        self.changeColor=False
 
     def to_tlwh(self):
         """Get current position in bounding box format `(top left x, top left y,

@@ -83,13 +83,29 @@ class Tracker:
 
         # Custom code
         i=0
-        while i<len(self.tracks): # Delete lost objects and their timer
+        while i<len(self.tracks): # Delete lost objects
             if self.tracks[i].is_deleted():
                 if self.tracks[i].class_id==0: # If a person has disappeared
-                    self.tracks[0].parked=True
+                    # Look for the car nearest the disappeared person
+                    person_box = self.tracks[i].to_tlwh()
+                    center_of_person_box=[int((person_box[0]+person_box[2])/2), int((person_box[1]+person_box[3])/2)]
+                    most_likely_car=0
+                    distance_min=999999
+                    for i in range(self.tracks):
+                        box=self.tracks[i].to_tlwh()
+                        center_of_box=[int((box[0]+box[2])/2), int((box[1]+box[3])/2)]
+                        dx=abs(center_of_person_box[0]-center_of_box[0])
+                        dy=abs(center_of_person_box[1]-center_of_box[1])
+                        distance=dx+dy
+                        if distance>0 and distance<10 and distance<distance_min:
+                            # Update most likely car
+                            distance_min=distance
+                            most_likely_car=i
+
+                    self.tracks[i].changeColor=True
                     self.n_person-=1
 
-                if self.tracks[i].parked: # When a parked car disappeared
+                if self.tracks[i].changeColor:
                     parked_car_num-=1
                     new_car_num=len(self.tracks) - 1 - self.n_person - parked_car_num
                     message="Parked car removed, : "+str(parked_car_num)+", new cars: "+str(new_car_num)

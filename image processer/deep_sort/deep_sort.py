@@ -89,17 +89,15 @@ class DeepSort(object):
             # Custom code
                 # Check if this object is slow
             prev_box = track.to_tlwh_prev()
-            prev_x1, prev_y1, prev_x2, prev_y2 = self._tlwh_to_xyxy(prev_box)
-            center_of_prev_box=[int((prev_x1+prev_x2)/2), int((prev_y1+prev_y2)/2)]
-            dx=abs(center_of_prev_box[0]-center_of_box[0])
-            dy=abs(center_of_prev_box[1]-center_of_box[1])
+            dx=abs(box[0]-prev_box[0])
+            dy=abs(box[1]-prev_box[1])
             if dx+dy<3: # If slow or stopped
                 track.slow_object=True            
             else:
                 track.slow_object=False
 
             if track.timer_alarm.signal: # Parked car detected
-                track.parked=True
+                track.changeColor=True
                 self.parked_car_num+=1
                 #left_space_num=self.total_space_num - parked_car_num
                 new_car_num=len(self.tracker.tracks) - self.parked_car_num
@@ -108,7 +106,7 @@ class DeepSort(object):
                 track.timer_alarm.signal=False
            
             outputs.append(np.array([x1, y1, x2, y2, track_id, class_id, conf, 
-                            track.timer_alarm.elapsed_time, track.slow_object, track.parked]))
+                            track.timer_alarm.elapsed_time, track.slow_object, track.changeColor]))
             track.prev_mean=track.mean # Use previous location to know if it's slow/
         if len(outputs) > 0:
             outputs = np.stack(outputs, axis=0)

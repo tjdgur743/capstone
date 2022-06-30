@@ -41,14 +41,14 @@ np.random.seed(4)
 COLORS = np.random.randint(0, 255, size=(len(classes), 3), dtype='uint8')
 
 # Dataloader
-cam=True
+webcam=False
 #source='0'
-source="resource/parking.mp4"
-if cam:
+if webcam:
     cudnn.benchmark = True  # set True to speed up constant image size inference
     #input = LoadStreams(source, img_size=img_size, stride=stride, auto=pt)
-    input = MyStream(img_size=img_size, stride=stride, auto=pt, raspberry=False) # Turn on webcam
+    input = MyStream(img_size=img_size, stride=stride, auto=pt, raspberry=True)
 else:
+    source="resource/parking.mp4"
     input = LoadImages(source, img_size=img_size, stride=stride, auto=pt)
 
 # initialize deepsort
@@ -81,7 +81,7 @@ for frame_idx, (path, image, image0s, vid_cap, s) in enumerate(input): # Frames
     # Process detections
     for i, detection in enumerate(pred):  # Deepsort on detections in this frame
         #start_time=time.time() # To measure FPS
-        if cam:
+        if webcam:
             image0= image0s[i] # A frame
         else:
             image0, _ = image0s, getattr(input, 'frame', 0) # A frame
@@ -124,6 +124,9 @@ for frame_idx, (path, image, image0s, vid_cap, s) in enumerate(input): # Frames
         cv2.putText(image0, 'FPS: {}'.format(str(fps)), (0,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0), 1)'''
         
         cv2.imshow('capstone', image0)
+        # Getting the coordinate
+        '''x_pos,y_pos,width,height = cv2.selectROI("location", image0, False)
+        print(x_pos,y_pos)'''
         if cv2.waitKey(1)==27:
             exit()
 
@@ -132,7 +135,7 @@ for frame_idx, (path, image, image0s, vid_cap, s) in enumerate(input): # Frames
         image_as_text = base64.b64encode(encoded_frame)#.decode('utf-8')
         socket_io.emit('frame from python', image_as_text)'''
                 
-        '''if keyboard.is_pressed('etc'):
+        '''if keyboard.is_pressed('enter'):
                 exit()'''
         '''if keyboard.is_pressed('space'): # Enter to reset
             deepsort=DeepSort(
