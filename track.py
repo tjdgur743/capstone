@@ -228,7 +228,26 @@ for frame_idx, (path, image, image0s, vid_cap, s) in enumerate(input): # Frames
             led_counter = 0
         else : led_counter+=1
         
-        if source == "resource/outcase_4.mp4" or source == "resource/incase_4.mp4" or cam == True:
+        if cam:
+            circle_y = 80
+            for i in range(4):
+                if i == 0:
+                    circle_x = 158
+                elif i == 1:
+                    circle_x = 316
+                elif i == 2:
+                    circle_x = 481
+                elif i == 3:
+                    circle_x = 635
+                if parked_list[i] == 0:
+                    cv2.circle(image0, (circle_x, circle_y), 10, (0,255,0), -1)
+                elif parked_list[i] < 0:
+                    cv2.circle(image0, (circle_x, circle_y), 10, (0,127,255), -1)
+                elif parked_list[i] >= 1:
+                    cv2.circle(image0, (circle_x, circle_y), 10, (0,0,255), -1)
+                elif parked_list[i] == 0.5 and led_counter % 2 == 0:
+                    cv2.circle(image0, (circle_x, circle_y), 10, (0,255,0), -1)
+        elif source == "resource/outcase_4.mp4" or source == "resource/incase_4.mp4":
             circle_y = 100
             for i in range(4):
                 if i == 0:
