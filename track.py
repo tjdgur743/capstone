@@ -46,8 +46,10 @@ classes=[0,2,7,67] # car:2, truck:7, 67: phone
 np.random.seed(4)
 COLORS = np.random.randint(0, 255, size=(len(classes), 3), dtype='uint8')
 
-client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client_socket = 0
 def connect_to_raspberry():
+    global client_socket
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     ip = "192.168.137.226"
     client_socket.connect((ip, 9000))
     print(f"Bound to port 9000")
