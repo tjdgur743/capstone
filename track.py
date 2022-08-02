@@ -141,7 +141,7 @@ for frame_idx, (path, image, image0s, vid_cap, s) in enumerate(input): # Frames
             clss = detection[:, 5] # class
 
             # Pass a detection to deepsort
-            outputs = deepsort.update(xywhs.cpu(), confs.cpu(), clss.cpu(), image0, parked_list)
+            outputs = deepsort.update(xywhs.cpu(), confs.cpu(), clss.cpu(), image0, parked_list, client_socket)
 
             # Draw boxes for visualization
             for j, (output) in enumerate(outputs):
