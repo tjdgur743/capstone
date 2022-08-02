@@ -78,11 +78,13 @@ elif source == "resource/outcase_4.mp4" or source == "resource/incase_4.mp4":
     parked_list = [0, 0, 0, 0]
     least = [0, 0, 0, 0]
     disappeared = [0, 0, 0, 0]
+    input = LoadImages(source, img_size=img_size, stride=stride, auto=pt)
 else:
     parking_space = [[270,300,150,250],[450,480,150,250],[640,670,150,250],[820,850,150,250],[1000,1030,150,250]]
     parked_list = [0, 0, 0, 0, 0]
     least = [0, 0, 0, 0, 0]
     disappeared = [0, 0, 0, 0, 0]
+    input = LoadImages(source, img_size=img_size, stride=stride, auto=pt)
 # else:
 #     input = LoadImages(source, img_size=img_size, stride=stride, auto=pt)
 
@@ -104,7 +106,6 @@ outputs = []
 led_counter = 0
 dic_least = {}
 min_index = 0
-disappear_count = 0
 
 model.warmup(imgsz=(1, 3, *img_size))
 for frame_idx, (path, image, image0s, vid_cap, s) in enumerate(input): # Frames
@@ -142,6 +143,7 @@ for frame_idx, (path, image, image0s, vid_cap, s) in enumerate(input): # Frames
 
             # Pass a detection to deepsort
             outputs = deepsort.update(xywhs.cpu(), confs.cpu(), clss.cpu(), image0, parked_list, client_socket)
+            # outputs = deepsort.update(xywhs.cpu(), confs.cpu(), clss.cpu(), image0, parked_list)
 
             # Draw boxes for visualization
             for j, (output) in enumerate(outputs):
@@ -152,8 +154,8 @@ for frame_idx, (path, image, image0s, vid_cap, s) in enumerate(input): # Frames
                 elapsed_time=output[7]
                 slow='slow' if output[8] else ''
                 c = int(cls)  # integer class
-                # label = f'{id:.0f} {names[c]}/{elapsed_time:0.0f}/{output[10]}/{output[11]}'
-                label = f'id:{id:.0f} {names[c]}'
+                label = f'{id:.0f} {names[c]}/{elapsed_time:0.0f}/{output[10]}/{output[11]}'
+                # label = f'id:{id:.0f} {names[c]}'
                 color=[1,1,1] if output[9] else [ int(c) for c in COLORS[c%len(classes)] ] # Parked, not parked
                 annotator.box_label(bbox, label, color=color)
                 for k in range(len(parked_list)):
@@ -206,18 +208,17 @@ for frame_idx, (path, image, image0s, vid_cap, s) in enumerate(input): # Frames
                 dic_least.clear()
 
                 if parked_list.count(0.5) == 1:
-                    if min_index_1 != parked_list.index(0.5):
-                        disappeared[parked_list.index(0.5)] += 1
-                        print(disappeared)
-                        if sum(disappeared) >= 100:
-                            disappear_count += 1
-                            parked_list[parked_list.index(0.5)] = 0
-                            for i in range(len(disappeared)):
-                                disappeared[i] = 0
-                            print(f'{parked_list}parked')
-                            if raspberry:
-                                client_socket.sendall(str(parked_list).encode())
-                                client_socket.recv(99)                            
+                    # if min_index_1 != parked_list.index(0.5):
+                    disappeared[parked_list.index(0.5)] += 1
+                    print(disappeared)
+                    if sum(disappeared) >= 100:
+                        parked_list[parked_list.index(0.5)] = 0
+                        for i in range(len(disappeared)):
+                            disappeared[i] = 0
+                        print(f'{parked_list}parked')
+                        if raspberry:
+                            client_socket.sendall(str(parked_list).encode())
+                            client_socket.recv(99)                            
 
 
         else: # No detection
