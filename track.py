@@ -49,7 +49,7 @@ COLORS = np.random.randint(0, 255, size=(len(classes), 3), dtype='uint8')
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 def connect_to_raspberry():
     ip = "192.168.137.226"
-    client_socket.connet((ip, 9000))
+    client_socket.connect((ip, 9000))
     print(f"Bound to port 9000")
 raspberry = True
 if raspberry: connect_to_raspberry()
@@ -63,7 +63,7 @@ source="resource/incase_5_1.mp4"
 # source="resource/outcase_4.mp4"
 # source="resource/incase_4.mp4"
 if cam:
-    parking_space = [[250, 350, 200, 300], [490, 560, 210, 290], [730, 780, 220, 270], [980, 1050, 220, 300]]
+    parking_space = [[138, 178, 72, 112], [296, 336, 77, 117], [461, 501, 87, 127], [615, 655, 78, 118]]
     parked_list = [0, 0, 0, 0]
     least = [0, 0, 0, 0]
     disappeared = [0, 0, 0, 0]
