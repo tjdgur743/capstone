@@ -1,10 +1,13 @@
 from dis import dis
+from http import client
+from multiprocessing.connection import wait
 import resource
 import sys
 sys.path.insert(0, './yolov5')
 
 #import base64, socketio, requests
 #import time, math, keyboard
+import socket
 from pathlib import Path
 import numpy as np
 import cv2
@@ -44,32 +47,49 @@ classes=[0,2,7,67] # car:2, truck:7, 67: phone
 np.random.seed(4)
 COLORS = np.random.randint(0, 255, size=(len(classes), 3), dtype='uint8')
 
+client_socket = 0
+def connect_to_raspberry():
+    global client_socket
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    ip = "192.168.137.226"
+    client_socket.connect((ip, 9000))
+    print(f"Bound to port 9000")
+raspberry = False
+if raspberry: connect_to_raspberry()
+
 # Dataloader
 cam=False
 #source='0'
 # source="resource/other_case.mp4"
 # source="resource/incase_5_1.mp4"
-source="resource/outcase_5.mp4"
-# source="resource/outcase_4.mp4"
+# source="resource/outcase_5.mp4"
+source="resource/outcase_4.mp4"
 # source="resource/incase_4.mp4"
-if source == "resource/outcase_4.mp4" or source == "resource/incase_4.mp4":
+if cam:
+    parking_space = [[138, 178, 72, 112], [296, 336, 77, 117], [461, 501, 87, 127], [615, 655, 78, 118]]
+    parked_list = [0, 0, 0, 0]
+    least = [0, 0, 0, 0]
+    disappeared = [0, 0, 0, 0]
+    cudnn.benchmark = True  # set True to speed up constant image size inference
+    #input = LoadStreams(source, img_size=img_size, stride=stride, auto=pt)
+    # input = MyStream(img_size=img_size, stride=stride, auto=pt, raspberry=False) # Turn on webcam
+    input = MyStream(img_size=img_size, stride=stride, auto=pt, raspberry=raspberry) # Turn on webcam
+elif source == "resource/outcase_4.mp4" or source == "resource/incase_4.mp4":
     parking_space = [[250, 350, 200, 300], [490, 560, 210, 290], [730, 780, 220, 270], [980, 1050, 220, 300]]
     parked_list = [0, 0, 0, 0]
     least = [0, 0, 0, 0]
     disappeared = [0, 0, 0, 0]
-# if source == "resource/outcase_5.mp4":
+    input = LoadImages(source, img_size=img_size, stride=stride, auto=pt)
 else:
     parking_space = [[270,300,150,250],[450,480,150,250],[640,670,150,250],[820,850,150,250],[1000,1030,150,250]]
     parked_list = [0, 0, 0, 0, 0]
     least = [0, 0, 0, 0, 0]
     disappeared = [0, 0, 0, 0, 0]
-if cam:
-    cudnn.benchmark = True  # set True to speed up constant image size inference
-    #input = LoadStreams(source, img_size=img_size, stride=stride, auto=pt)
-    input = MyStream(img_size=img_size, stride=stride, auto=pt, raspberry=False) # Turn on webcam
-else:
     input = LoadImages(source, img_size=img_size, stride=stride, auto=pt)
+# else:
+#     input = LoadImages(source, img_size=img_size, stride=stride, auto=pt)
 
+waiting_time = 0
 # initialize deepsort
 cfg = get_config()
 config_deepsort="deep_sort/configs/deep_sort.yaml"
@@ -82,12 +102,12 @@ deepsort=DeepSort(
                 max_age=30,#cfg.DEEPSORT.MAX_AGE,
                 n_init=cfg.DEEPSORT.N_INIT, nn_budget=cfg.DEEPSORT.NN_BUDGET)
 
+
 # Run tracking
 outputs = []
 led_counter = 0
 dic_least = {}
 min_index = 0
-disappear_count = 0
 
 model.warmup(imgsz=(1, 3, *img_size))
 for frame_idx, (path, image, image0s, vid_cap, s) in enumerate(input): # Frames
@@ -124,6 +144,7 @@ for frame_idx, (path, image, image0s, vid_cap, s) in enumerate(input): # Frames
             clss = detection[:, 5] # class
 
             # Pass a detection to deepsort
+            # outputs = deepsort.update(xywhs.cpu(), confs.cpu(), clss.cpu(), image0, parked_list, client_socket)
             outputs = deepsort.update(xywhs.cpu(), confs.cpu(), clss.cpu(), image0, parked_list)
 
             # Draw boxes for visualization
@@ -135,8 +156,8 @@ for frame_idx, (path, image, image0s, vid_cap, s) in enumerate(input): # Frames
                 elapsed_time=output[7]
                 slow='slow' if output[8] else ''
                 c = int(cls)  # integer class
-                # label = f'{id:.0f} {names[c]}/{elapsed_time:0.0f}/{output[10]}/{output[11]}'
-                label = f'id:{id:.0f} {names[c]}'
+                label = f'{id:.0f} {names[c]}/{elapsed_time:0.0f}/{output[10]}/{output[11]}'
+                # label = f'id:{id:.0f} {names[c]}'
                 color=[1,1,1] if output[9] else [ int(c) for c in COLORS[c%len(classes)] ] # Parked, not parked
                 annotator.box_label(bbox, label, color=color)
                 for k in range(len(parked_list)):
@@ -144,10 +165,26 @@ for frame_idx, (path, image, image0s, vid_cap, s) in enumerate(input): # Frames
                         if int(id) not in parked_list:
                             parked_list[k] = int(id)
                             print(f'{parked_list}parked')
-                    elif names[c] == 'car' and (not (parking_space[k][0] <= output[10] <= parking_space[k][1]) and not( parking_space[k][2] <= output[11] <= parking_space[k][3])):
-                        if (parked_list[k] == -int(id)):
+                            if raspberry:
+                                client_socket.sendall(str(parked_list).encode())
+                                client_socket.recv(99)
+                    if names[c] == 'car' and not(parking_space[k][0] <= output[10] <= parking_space[k][1]) and not( parking_space[k][2] <= output[11] <= parking_space[k][3]):
+                        if parked_list[k] == int(id) or parked_list[k] == -int(id):
                             parked_list[k] = 0
                             print(f'{parked_list}parked')
+                            if raspberry:
+                                client_socket.sendall(str(parked_list).encode())
+                                client_socket.recv(99) 
+                    if parked_list[k] < 0 and names[c] == 'car' and parking_space[k][0] <= output[10] <= parking_space[k][1] and  parking_space[k][2] <= output[11] <= parking_space[k][3]:
+                        if waiting_time == 0:
+                            waiting_time = elapsed_time   
+                        elif elapsed_time - waiting_time > 3:
+                            waiting_time = 0
+                            parked_list[k] = -parked_list[k] 
+                            print(f'{parked_list}parked')
+                            if raspberry:
+                                client_socket.sendall(str(parked_list).encode())
+                                client_socket.recv(99) 
                 if  names[c] == 'car' and int(id) not in parked_list and 0 < int(elapsed_time) < 30:
                     for i in range(len(parked_list)):
                         least[i] = abs(((parking_space[i][0] + parking_space[i][1])/2) - output[10])
@@ -160,30 +197,40 @@ for frame_idx, (path, image, image0s, vid_cap, s) in enumerate(input): # Frames
                     list_sort = list(sort_least.values())
                     for key, value in sort_least.items():
                         if value == list_sort[0] and parked_list[key] == 0:
-
                             min_index = key
                     if parked_list.count(0.5) > 1:
                         if min_index > 0 and parked_list[min_index - 1] == 0.5:
                             parked_list[min_index - 1] = 0
                             print(f'{parked_list}parked')
+                            if raspberry:
+                                client_socket.sendall(str(parked_list).encode())
+                                client_socket.recv(99)
                         elif min_index < len(parked_list) - 1 and parked_list[min_index + 1] == 0.5:
                             parked_list[min_index + 1] = 0
                             print(f'{parked_list}parked')
+                            if raspberry:
+                                client_socket.sendall(str(parked_list).encode())
+                                client_socket.recv(99)                            
                     elif parked_list[min_index] == 0:
                         parked_list[min_index] = 0.5
                         print(f'{parked_list}parked')
+                        if raspberry:
+                            client_socket.sendall(str(parked_list).encode())
+                            client_socket.recv(99)                        
                 dic_least.clear()
 
                 if parked_list.count(0.5) == 1:
-                    if min_index_1 != parked_list.index(0.5):
-                        disappeared[parked_list.index(0.5)] += 1
-                        print(disappeared)
-                        if sum(disappeared) >= 100:
-                            disappear_count += 1
-                            parked_list[parked_list.index(0.5)] = 0
-                            for i in range(len(disappeared)):
-                                disappeared[i] = 0
-                            print(f'{parked_list}parked')
+                    # if min_index_1 != parked_list.index(0.5):
+                    disappeared[parked_list.index(0.5)] += 1
+                    print(disappeared)
+                    if sum(disappeared) >= 100:
+                        parked_list[parked_list.index(0.5)] = 0
+                        for i in range(len(disappeared)):
+                            disappeared[i] = 0
+                        print(f'{parked_list}parked')
+                        if raspberry:
+                            client_socket.sendall(str(parked_list).encode())
+                            client_socket.recv(99)                            
 
 
         else: # No detection
@@ -194,7 +241,26 @@ for frame_idx, (path, image, image0s, vid_cap, s) in enumerate(input): # Frames
             led_counter = 0
         else : led_counter+=1
         
-        if source == "resource/outcase_4.mp4" or source == "resource/incase_4.mp4":
+        if cam:
+            circle_y = 80
+            for i in range(4):
+                if i == 0:
+                    circle_x = 158
+                elif i == 1:
+                    circle_x = 316
+                elif i == 2:
+                    circle_x = 481
+                elif i == 3:
+                    circle_x = 635
+                if parked_list[i] == 0:
+                    cv2.circle(image0, (circle_x, circle_y), 10, (0,255,0), -1)
+                elif parked_list[i] < 0:
+                    cv2.circle(image0, (circle_x, circle_y), 10, (0,127,255), -1)
+                elif parked_list[i] >= 1:
+                    cv2.circle(image0, (circle_x, circle_y), 10, (0,0,255), -1)
+                elif parked_list[i] == 0.5 and led_counter % 2 == 0:
+                    cv2.circle(image0, (circle_x, circle_y), 10, (0,255,0), -1)
+        elif source == "resource/outcase_4.mp4" or source == "resource/incase_4.mp4":
             circle_y = 100
             for i in range(4):
                 if i == 0:
